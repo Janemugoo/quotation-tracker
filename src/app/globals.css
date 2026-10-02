@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Panorama Park Hotel brand colors, sampled from the logo, so the app's
+   buttons/links/accents match the quotation letter's brown + green instead
+   of generic slate/black. */
+@theme {
+  --color-brand-brown: #663333;
+  --color-brand-brown-dark: #4d2626;
+  --color-brand-brown-light: #f5efed;
+  --color-brand-green: #009933;
+  --color-brand-green-dark: #00802b;
+  --color-brand-green-light: #e8f6ec;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
