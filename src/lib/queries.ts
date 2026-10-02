@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { db } from "./db";
+import { getDb } from "./db";
 import type {
   FollowUpWithAuthor,
   Quotation,
@@ -27,20 +27,20 @@ function parseLineItems<T extends { line_items: unknown }>(
 // ---------- Users ----------
 
 export function getUserByEmail(email: string): User | undefined {
-  const row = db
+  const row = getDb()
     .prepare("SELECT * FROM users WHERE email = ?")
     .get(email.trim().toLowerCase()) as unknown as User | undefined;
   return row;
 }
 
 export function getUserById(id: string): User | undefined {
-  return db.prepare("SELECT * FROM users WHERE id = ?").get(id) as
+  return getDb().prepare("SELECT * FROM users WHERE id = ?").get(id) as
     | User
     | undefined;
 }
 
 export function listUsers(): User[] {
-  return db.prepare("SELECT * FROM users ORDER BY name").all() as unknown as User[];
+  return getDb().prepare("SELECT * FROM users ORDER BY name").all() as unknown as User[];
 }
 
 export function createUser(params: {
@@ -50,7 +50,7 @@ export function createUser(params: {
   isAdmin?: boolean;
 }): User {
   const id = randomUUID();
-  db.prepare(
+  getDb().prepare(
     "INSERT INTO users (id, name, email, password, is_admin) VALUES (?, ?, ?, ?, ?)"
   ).run(
     id,
@@ -63,7 +63,7 @@ export function createUser(params: {
 }
 
 export function countAdmins(): number {
-  const row = db
+  const row = getDb()
     .prepare("SELECT COUNT(*) AS n FROM users WHERE is_admin = 1")
     .get() as { n: number };
   return row.n;
@@ -77,18 +77,18 @@ export function noAdminsYet(): boolean {
 }
 
 export function updateUserPassword(id: string, passwordHash: string): void {
-  db.prepare("UPDATE users SET password = ? WHERE id = ?").run(passwordHash, id);
+  getDb().prepare("UPDATE users SET password = ? WHERE id = ?").run(passwordHash, id);
 }
 
 export function setUserAdmin(id: string, isAdmin: boolean): void {
-  db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(isAdmin ? 1 : 0, id);
+  getDb().prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(isAdmin ? 1 : 0, id);
 }
 
 // Throws if the user has created quotations or follow-ups (the DB's foreign
 // keys protect that history) — callers should catch and show a friendly
 // message rather than losing a staff member's quotation trail.
 export function deleteUser(id: string): void {
-  db.prepare("DELETE FROM users WHERE id = ?").run(id);
+  getDb().prepare("DELETE FROM users WHERE id = ?").run(id);
 }
 
 // ---------- Quotations ----------
@@ -116,7 +116,7 @@ export function listQuotations(filters: QuotationFilters = {}): QuotationWithMet
 
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
-  const rows = db
+  const rows = getDb()
     .prepare(
       `SELECT
          q.*,
@@ -134,7 +134,7 @@ export function listQuotations(filters: QuotationFilters = {}): QuotationWithMet
 }
 
 export function getQuotation(id: string): QuotationWithMeta | undefined {
-  const row = db
+  const row = getDb()
     .prepare(
       `SELECT
          q.*,
@@ -173,7 +173,7 @@ export function createQuotation(
   createdBy: string
 ): Quotation {
   const id = randomUUID();
-  db.prepare(
+  getDb().prepare(
     `INSERT INTO quotations (
        id, date_of_inquiry, group_name, event_dates, event_date_from, event_date_to,
        number_of_pax, package, rate, provisions,
@@ -200,12 +200,12 @@ export function createQuotation(
     input.line_items ? JSON.stringify(input.line_items) : null,
     createdBy
   );
-  const row = db.prepare("SELECT * FROM quotations WHERE id = ?").get(id) as unknown as Quotation;
+  const row = getDb().prepare("SELECT * FROM quotations WHERE id = ?").get(id) as unknown as Quotation;
   return parseLineItems(row);
 }
 
 export function updateQuotation(id: string, input: QuotationInput): Quotation {
-  db.prepare(
+  getDb().prepare(
     `UPDATE quotations SET
        date_of_inquiry = ?, group_name = ?, event_dates = ?, event_date_from = ?, event_date_to = ?,
        number_of_pax = ?,
@@ -232,18 +232,18 @@ export function updateQuotation(id: string, input: QuotationInput): Quotation {
     input.line_items ? JSON.stringify(input.line_items) : null,
     id
   );
-  const row = db.prepare("SELECT * FROM quotations WHERE id = ?").get(id) as unknown as Quotation;
+  const row = getDb().prepare("SELECT * FROM quotations WHERE id = ?").get(id) as unknown as Quotation;
   return parseLineItems(row);
 }
 
 export function deleteQuotation(id: string): void {
-  db.prepare("DELETE FROM quotations WHERE id = ?").run(id);
+  getDb().prepare("DELETE FROM quotations WHERE id = ?").run(id);
 }
 
 // ---------- Follow-ups ----------
 
 export function listFollowUps(quotationId: string): FollowUpWithAuthor[] {
-  return db
+  return getDb()
     .prepare(
       `SELECT f.*, u.name AS author_name
        FROM follow_ups f
@@ -260,20 +260,20 @@ export function addFollowUp(params: {
   note: string;
 }): FollowUpWithAuthor {
   const id = randomUUID();
-  db.prepare(
+  getDb().prepare(
     "INSERT INTO follow_ups (id, quotation_id, author_id, note) VALUES (?, ?, ?, ?)"
   ).run(id, params.quotationId, params.authorId, params.note);
 
   // Bump the quotation's updated_at and mark it followed-up if it was still
   // a fresh inquiry, so the dashboard reflects that someone acted on it.
-  db.prepare(
+  getDb().prepare(
     `UPDATE quotations
      SET updated_at = datetime('now'),
          status = CASE WHEN status = 'INQUIRY' THEN 'FOLLOWED_UP' ELSE status END
      WHERE id = ?`
   ).run(params.quotationId);
 
-  return db
+  return getDb()
     .prepare(
       `SELECT f.*, u.name AS author_name FROM follow_ups f JOIN users u ON u.id = f.author_id WHERE f.id = ?`
     )
@@ -283,7 +283,7 @@ export function addFollowUp(params: {
 // ---------- Dashboard summary ----------
 
 export function statusCounts(): Record<QuotationStatus, number> {
-  const rows = db
+  const rows = getDb()
     .prepare("SELECT status, COUNT(*) AS n FROM quotations GROUP BY status")
     .all() as { status: QuotationStatus; n: number }[];
   const result: Record<QuotationStatus, number> = {

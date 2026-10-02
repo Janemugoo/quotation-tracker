@@ -101,7 +101,22 @@ function init(): DatabaseSync {
   return db;
 }
 
-export const db = globalThis.__db ?? init();
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__db = db;
+// Opened lazily, on the first actual query — not as a side effect of
+// importing this module. Next.js's build-time "collect page data" step
+// imports every route's module graph (including this file) across several
+// parallel worker processes without ever calling into application code, so
+// if the database were opened/migrated at module load time, multiple build
+// workers could race to open and ALTER the same SQLite file at once and
+// fail with "database is locked". Deferring the real work to getDb() means
+// it only ever runs when a request is actually being handled.
+let dbInstance: DatabaseSync | undefined;
+
+export function getDb(): DatabaseSync {
+  if (!dbInstance) {
+    dbInstance = globalThis.__db ?? init();
+    if (process.env.NODE_ENV !== "production") {
+      globalThis.__db = dbInstance;
+    }
+  }
+  return dbInstance;
 }
