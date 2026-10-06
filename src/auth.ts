@@ -2,11 +2,11 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { getUserByEmail } from "@/lib/queries";
-import { authConfig } from "@/auth.config";
+import { applySessionLimit, authConfig } from "@/auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
-  session: { strategy: "jwt" },
+  // session lifetime (SESSION_HOURS) comes from authConfig
   providers: [
     Credentials({
       credentials: {
@@ -40,7 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false;
       }
-      return token;
+      return applySessionLimit(token, !!user);
     },
     session({ session, token }) {
       if (session.user) {

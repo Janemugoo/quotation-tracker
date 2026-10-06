@@ -6,6 +6,10 @@ import type {
   QuotationLineItem,
   QuotationStatus,
   QuotationWithMeta,
+  Tender,
+  TenderNoteWithAuthor,
+  TenderStatus,
+  TenderWithMeta,
   User,
 } from "./types";
 
@@ -98,7 +102,7 @@ export interface QuotationFilters {
   search?: string;
 }
 
-export function listQuotations(filters: QuotationFilters = {}): QuotationWithMeta[] {
+function quotationWhere(filters: QuotationFilters) {
   const clauses: string[] = [];
   const params: (string | number)[] = [];
 
@@ -114,21 +118,62 @@ export function listQuotations(filters: QuotationFilters = {}): QuotationWithMet
     params.push(like, like, like, like);
   }
 
-  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  return {
+    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  };
+}
 
-  const rows = getDb()
-    .prepare(
-      `SELECT
+const QUOTATION_SELECT = `SELECT
          q.*,
          u.name AS created_by_name,
          (SELECT COUNT(*) FROM follow_ups f WHERE f.quotation_id = q.id) AS follow_up_count,
          (SELECT MAX(f.created_at) FROM follow_ups f WHERE f.quotation_id = q.id) AS last_follow_up_at
        FROM quotations q
-       JOIN users u ON u.id = q.created_by
+       JOIN users u ON u.id = q.created_by`;
+
+// Every matching quotation (used by the CSV export). The dashboard uses
+// listQuotationsPage() instead so it never loads the whole table at once.
+export function listQuotations(filters: QuotationFilters = {}): QuotationWithMeta[] {
+  const { where, params } = quotationWhere(filters);
+  const rows = getDb()
+    .prepare(
+      `${QUOTATION_SELECT}
        ${where}
        ORDER BY q.date_of_inquiry DESC, q.created_at DESC`
     )
     .all(...params) as unknown as QuotationWithMeta[];
+
+  return rows.map(parseLineItems);
+}
+
+export function countQuotations(filters: QuotationFilters = {}): number {
+  const { where, params } = quotationWhere(filters);
+  const row = getDb()
+    .prepare(`SELECT COUNT(*) AS n FROM quotations q ${where}`)
+    .get(...params) as { n: number };
+  return row.n;
+}
+
+// One page of quotations, newest inquiry first. `page` is 1-based.
+export function listQuotationsPage(
+  filters: QuotationFilters,
+  page: number,
+  pageSize: number
+): QuotationWithMeta[] {
+  const { where, params } = quotationWhere(filters);
+  const rows = getDb()
+    .prepare(
+      `${QUOTATION_SELECT}
+       ${where}
+       ORDER BY q.date_of_inquiry DESC, q.created_at DESC
+       LIMIT ? OFFSET ?`
+    )
+    .all(
+      ...params,
+      pageSize,
+      (Math.max(1, page) - 1) * pageSize
+    ) as unknown as QuotationWithMeta[];
 
   return rows.map(parseLineItems);
 }
@@ -293,6 +338,200 @@ export function statusCounts(): Record<QuotationStatus, number> {
     CONFIRMED: 0,
     DECLINED: 0,
     LOST: 0,
+  };
+  for (const row of rows) result[row.status] = row.n;
+  return result;
+}
+
+// ---------- Tenders ----------
+
+export interface TenderInput {
+  title: string;
+  organisation: string;
+  reference_number: string;
+  submission_deadline: string;
+  estimated_value: number | null;
+  bid_value: number | null;
+  contact_person: string;
+  contact_phone: string;
+  contact_email: string;
+  status: TenderStatus;
+}
+
+export interface TenderFilters {
+  status?: TenderStatus | "ALL";
+  search?: string;
+}
+
+function tenderWhere(filters: TenderFilters) {
+  const clauses: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (filters.status && filters.status !== "ALL") {
+    clauses.push("t.status = ?");
+    params.push(filters.status);
+  }
+  if (filters.search && filters.search.trim()) {
+    clauses.push(
+      "(t.title LIKE ? OR t.organisation LIKE ? OR t.reference_number LIKE ? OR t.contact_person LIKE ?)"
+    );
+    const like = `%${filters.search.trim()}%`;
+    params.push(like, like, like, like);
+  }
+
+  return {
+    where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  };
+}
+
+const TENDER_SELECT = `SELECT
+         t.*,
+         u.name AS created_by_name,
+         (SELECT COUNT(*) FROM tender_notes n WHERE n.tender_id = t.id) AS note_count,
+         (SELECT MAX(n.created_at) FROM tender_notes n WHERE n.tender_id = t.id) AS last_note_at
+       FROM tenders t
+       JOIN users u ON u.id = t.created_by`;
+
+// Tenders still being worked on (Found / Preparing) come first, soonest
+// deadline at the top, so what needs attention next is always on page one;
+// finished ones (Submitted, Won, Lost, Not bidding) follow, newest first.
+const TENDER_ORDER = `ORDER BY
+         CASE WHEN t.status IN ('FOUND', 'PREPARING') THEN 0 ELSE 1 END,
+         CASE WHEN t.status IN ('FOUND', 'PREPARING')
+              AND (t.submission_deadline IS NULL OR t.submission_deadline = '') THEN 1 ELSE 0 END,
+         CASE WHEN t.status IN ('FOUND', 'PREPARING') THEN t.submission_deadline END ASC,
+         t.created_at DESC`;
+
+export function listTendersPage(
+  filters: TenderFilters,
+  page: number,
+  pageSize: number
+): TenderWithMeta[] {
+  const { where, params } = tenderWhere(filters);
+  return getDb()
+    .prepare(`${TENDER_SELECT} ${where} ${TENDER_ORDER} LIMIT ? OFFSET ?`)
+    .all(
+      ...params,
+      pageSize,
+      (Math.max(1, page) - 1) * pageSize
+    ) as unknown as TenderWithMeta[];
+}
+
+export function listTenders(filters: TenderFilters = {}): TenderWithMeta[] {
+  const { where, params } = tenderWhere(filters);
+  return getDb()
+    .prepare(`${TENDER_SELECT} ${where} ${TENDER_ORDER}`)
+    .all(...params) as unknown as TenderWithMeta[];
+}
+
+export function countTenders(filters: TenderFilters = {}): number {
+  const { where, params } = tenderWhere(filters);
+  const row = getDb()
+    .prepare(`SELECT COUNT(*) AS n FROM tenders t ${where}`)
+    .get(...params) as { n: number };
+  return row.n;
+}
+
+export function getTender(id: string): TenderWithMeta | undefined {
+  return getDb()
+    .prepare(`${TENDER_SELECT} WHERE t.id = ?`)
+    .get(id) as unknown as TenderWithMeta | undefined;
+}
+
+export function createTender(input: TenderInput, createdBy: string): Tender {
+  const id = randomUUID();
+  getDb()
+    .prepare(
+      `INSERT INTO tenders (
+         id, title, organisation, reference_number, submission_deadline,
+         estimated_value, bid_value, contact_person, contact_phone,
+         contact_email, status, created_by
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      input.title,
+      input.organisation,
+      input.reference_number,
+      input.submission_deadline,
+      input.estimated_value,
+      input.bid_value,
+      input.contact_person,
+      input.contact_phone,
+      input.contact_email,
+      input.status,
+      createdBy
+    );
+  return getDb().prepare("SELECT * FROM tenders WHERE id = ?").get(id) as unknown as Tender;
+}
+
+export function updateTender(id: string, input: TenderInput): void {
+  getDb()
+    .prepare(
+      `UPDATE tenders SET
+         title = ?, organisation = ?, reference_number = ?, submission_deadline = ?,
+         estimated_value = ?, bid_value = ?, contact_person = ?, contact_phone = ?,
+         contact_email = ?, status = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+    .run(
+      input.title,
+      input.organisation,
+      input.reference_number,
+      input.submission_deadline,
+      input.estimated_value,
+      input.bid_value,
+      input.contact_person,
+      input.contact_phone,
+      input.contact_email,
+      input.status,
+      id
+    );
+}
+
+export function deleteTender(id: string): void {
+  getDb().prepare("DELETE FROM tenders WHERE id = ?").run(id);
+}
+
+export function listTenderNotes(tenderId: string): TenderNoteWithAuthor[] {
+  return getDb()
+    .prepare(
+      `SELECT n.*, u.name AS author_name
+       FROM tender_notes n
+       JOIN users u ON u.id = n.author_id
+       WHERE n.tender_id = ?
+       ORDER BY n.created_at DESC`
+    )
+    .all(tenderId) as unknown as TenderNoteWithAuthor[];
+}
+
+export function addTenderNote(params: {
+  tenderId: string;
+  authorId: string;
+  note: string;
+}): void {
+  getDb()
+    .prepare(
+      "INSERT INTO tender_notes (id, tender_id, author_id, note) VALUES (?, ?, ?, ?)"
+    )
+    .run(randomUUID(), params.tenderId, params.authorId, params.note);
+  getDb()
+    .prepare("UPDATE tenders SET updated_at = datetime('now') WHERE id = ?")
+    .run(params.tenderId);
+}
+
+export function tenderStatusCounts(): Record<TenderStatus, number> {
+  const rows = getDb()
+    .prepare("SELECT status, COUNT(*) AS n FROM tenders GROUP BY status")
+    .all() as { status: TenderStatus; n: number }[];
+  const result: Record<TenderStatus, number> = {
+    FOUND: 0,
+    PREPARING: 0,
+    SUBMITTED: 0,
+    WON: 0,
+    LOST: 0,
+    NOT_BIDDING: 0,
   };
   for (const row of rows) result[row.status] = row.n;
   return result;

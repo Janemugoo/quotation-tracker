@@ -1,5 +1,10 @@
-import type { QuotationLineItem, QuotationStatus } from "@/lib/types";
-import type { QuotationInput } from "@/lib/queries";
+import {
+  TENDER_STATUS_ORDER,
+  type QuotationLineItem,
+  type QuotationStatus,
+  type TenderStatus,
+} from "@/lib/types";
+import type { QuotationInput, TenderInput } from "@/lib/queries";
 
 // Strips everything except digits and a decimal point, then parses — so
 // "7,000", "KSH 7000", or a bare "7000" all read the same, and free-text
@@ -112,5 +117,25 @@ export function parseQuotationFormInput(formData: FormData): QuotationInput {
     status: (formData.get("status") as QuotationStatus) ?? "INQUIRY",
     business_value,
     line_items,
+  };
+}
+
+// Parses the tender form. An unknown status falls back to "Found" rather than
+// saving something the list can't display.
+export function parseTenderFormInput(formData: FormData): TenderInput {
+  const text = (name: string) => (formData.get(name) as string | null)?.trim() ?? "";
+  const rawStatus = text("status") as TenderStatus;
+
+  return {
+    title: text("title"),
+    organisation: text("organisation"),
+    reference_number: text("reference_number"),
+    submission_deadline: text("submission_deadline"),
+    estimated_value: toNumber(text("estimated_value")),
+    bid_value: toNumber(text("bid_value")),
+    contact_person: text("contact_person"),
+    contact_phone: text("contact_phone"),
+    contact_email: text("contact_email"),
+    status: TENDER_STATUS_ORDER.includes(rawStatus) ? rawStatus : "FOUND",
   };
 }

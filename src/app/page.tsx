@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { listQuotations, statusCounts } from "@/lib/queries";
+import { countQuotations, listQuotationsPage, statusCounts } from "@/lib/queries";
 import { isSessionAdmin } from "@/lib/authz";
 import { STATUS_LABELS, STATUS_ORDER, type QuotationStatus } from "@/lib/types";
 import { TopNav } from "@/components/TopNav";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Pager } from "@/components/Pager";
+
+const PAGE_SIZE = 25;
 
 function formatDate(iso: string) {
   if (!iso) return "—";
@@ -25,14 +28,31 @@ function formatMoney(value: number | null) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
   const session = await auth();
   const params = await searchParams;
   const status = (params.status as QuotationStatus | "ALL") || "ALL";
   const search = params.q || "";
 
-  const quotations = listQuotations({ status, search });
+  const filters = { status, search };
+  const total = countQuotations(filters);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Math.min(
+    Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1),
+    totalPages
+  );
+  const quotations = listQuotationsPage(filters, page, PAGE_SIZE);
+
+  const pageHref = (p: number) => {
+    const qs = new URLSearchParams();
+    if (status !== "ALL") qs.set("status", status);
+    if (search) qs.set("q", search);
+    if (p > 1) qs.set("page", String(p));
+    const text = qs.toString();
+    return text ? `/?${text}` : "/";
+  };
   const counts = statusCounts();
   const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -43,7 +63,11 @@ export default async function DashboardPage({
 
   return (
     <div className="min-h-screen">
-      <TopNav userName={session?.user?.name ?? ""} isAdmin={isSessionAdmin(session)} />
+      <TopNav
+        userName={session?.user?.name ?? ""}
+        isAdmin={isSessionAdmin(session)}
+        active="quotations"
+      />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center justify-between gap-4 mb-6">
@@ -185,6 +209,8 @@ export default async function DashboardPage({
             </div>
           )}
         </div>
+
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} hrefFor={pageHref} />
       </main>
     </div>
   );

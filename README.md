@@ -6,7 +6,8 @@ Declined / Lost.
 
 ## What it does
 
-- Login-protected (email + password), built for up to 5 staff accounts
+- Login-protected (email + password), built for up to 5 staff accounts;
+  each login lasts 12 hours, then the person signs in again
 - Dashboard listing every quotation, filterable by status, searchable by
   group / agent / contact / email
 - Add / edit a quotation with the same fields as the tracking sheet (group
@@ -33,6 +34,17 @@ Declined / Lost.
   only) to add a staff login, reset someone's password, promote/demote an
   admin, or remove a login — no server access needed for day-to-day account
   changes
+- A **Tenders** page (linked at the top) to track tenders: title, issuing
+  organisation, reference number, submission deadline, estimated value and
+  our bid, contact details, and a status (Found → Preparing → Submitted →
+  Won / Lost / Not bidding) with a dated notes log. Tenders still being
+  worked on are listed first, soonest deadline at the top, and flagged
+  "Due in 3 days", "Due today" or "N days overdue"
+- Long lists are paged (25 per page), so the dashboard stays quick as the
+  number of quotations and tenders grows
+- Admins get a **Backup & export** card on the "Manage users" page:
+  download all quotations or all tenders as a CSV that opens in Excel, or a
+  full copy of the database as a backup
 - Data is stored in a local SQLite file (`data/app.db`) — no external
   database to set up
 
@@ -104,6 +116,11 @@ npm run dev
 Then open http://localhost:3000 and sign in with the account you just
 created.
 
+Instead of running `add-user.mjs`, you can put `ADMIN_NAME`, `ADMIN_EMAIL`
+and `ADMIN_PASSWORD` (at least 8 characters) in `.env`: the first admin login
+is then created automatically the first time the app starts with an empty
+database. See "Deploying it" for why this is useful on a server.
+
 ## Managing staff logins
 
 Day to day, this is done from inside the app: sign in as an admin and open
@@ -159,11 +176,23 @@ below if you want Vercel specifically).
 4. **Set environment variables** in the host's dashboard:
    - `AUTH_SECRET` — a random string (generate one with `openssl rand -base64 32`)
    - `AUTH_TRUST_HOST=true`
-5. **Deploy.** Once it's live, create the staff logins by running
-   `node scripts/add-user.mjs "Full Name" "email@..." "password" admin` for
-   yourself (from the host's shell/console — Railway and Render both offer
-   one) and plain `node scripts/add-user.mjs ...` (no `admin`) for everyone
-   else — or just add them yourself from "Manage users" once you're in.
+   - `SESSION_HOURS` (optional) — how long a login lasts before the person
+     has to sign in again. Defaults to 12 hours.
+   - `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` — your own admin login
+     (password at least 8 characters). The app creates it automatically the
+     first time it starts with an empty database, so there is no need to open
+     a shell on the server. It never touches an existing login, so a password
+     you change later in "Manage users" is not overwritten on a redeploy. Once
+     you have signed in, you can delete `ADMIN_PASSWORD` from the host.
+5. **Deploy**, sign in, and add everyone else from "Manage users".
+   (`node scripts/add-user.mjs ...` still works from the host's shell if you
+   ever need it.)
+
+**Backups.** A volume keeps your data across redeploys, but it is not a
+backup. Now and then — say weekly — open "Manage users" and press
+**Download full backup**, and keep the file somewhere safe (it contains every
+login, so treat it like a password). To restore, put the file back at
+`data/app.db` on the server.
 6. Share the URL the host gives you (e.g. `your-app.up.railway.app`) with
    your GM — add a custom domain later from the same dashboard if you want
    one.
@@ -183,8 +212,15 @@ src/
     login/page.tsx            login form
     quotations/new/page.tsx   add quotation
     quotations/[id]/page.tsx  view / edit a quotation + follow-up log
-    users/page.tsx             "Manage users" admin page
+    users/page.tsx             "Manage users" admin page (+ backup & export)
     users/actions.ts            add/reset/promote/remove a user login
+    tenders/page.tsx            tender list (filter, search, deadline flags)
+    tenders/new/page.tsx        add a tender
+    tenders/[id]/page.tsx       view / edit a tender + notes log
+    tenders/actions.ts          create/update/delete tender, add note
+    api/admin/export/quotations   admin-only CSV of all quotations
+    api/admin/export/tenders      admin-only CSV of all tenders
+    api/admin/backup              admin-only full database download
     actions.ts                 create/update/delete quotation, add follow-up
     api/quotations/[id]/letter/route.ts       generates the saved letter (PDF)
     api/quotations/preview/letter/route.ts    generates the no-save preview (PDF, currently unused in the UI)
@@ -192,14 +228,18 @@ src/
     QuotationForm.tsx          shared add/edit form
     LineItemsEditor.tsx         the Rate Breakdown row editor (package/rate/pax/nights/provisions per line)
     StatusBadge.tsx
-    TopNav.tsx                 shows "Manage users" link to admins only
+    TopNav.tsx                 Quotations / Tenders links; "Manage users" for admins only
+    TenderForm.tsx             shared add/edit form for tenders
+    TenderStatusBadge.tsx, DeadlineLabel.tsx, DeleteTenderDialog.tsx, Pager.tsx
     DeleteQuotationDialog.tsx   confirm-before-delete popup (quotations)
     DeleteUserDialog.tsx        confirm-before-delete popup (users)
   lib/
-    db.ts                      SQLite connection + table setup
+    db.ts                      SQLite connection + table setup + first-admin seed
     queries.ts                  all database reads/writes
     formInput.ts                 shared form-parsing (used by actions.ts and the preview route)
     authz.ts                     who counts as an admin (incl. the bootstrap case)
+    csv.ts                       CSV writer used by the exports
+    tenderDates.ts              deadline maths (Nairobi time)
     types.ts                    shared types
     pdf/quotationLetter.ts       the letter template itself
   auth.ts / auth.config.ts / proxy.ts   login + route protection

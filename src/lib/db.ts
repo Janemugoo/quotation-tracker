@@ -1,6 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
+import bcrypt from "bcryptjs";
 
 // Single shared SQLite connection, stored on the global object so hot
 // reloads in dev don't open a new file handle every request.
@@ -14,6 +16,9 @@ const DB_PATH = path.join(process.cwd(), "data", "app.db");
 function init(): DatabaseSync {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const db = new DatabaseSync(DB_PATH);
+  // If two writes ever collide, wait up to 5s for the other to finish
+  // instead of failing straight away with "database is locked".
+  db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
 
@@ -53,8 +58,35 @@ function init(): DatabaseSync {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS tenders (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      organisation TEXT NOT NULL,
+      reference_number TEXT,
+      submission_deadline TEXT,
+      estimated_value REAL,
+      bid_value REAL,
+      contact_person TEXT,
+      contact_phone TEXT,
+      contact_email TEXT,
+      status TEXT NOT NULL DEFAULT 'FOUND',
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tender_notes (
+      id TEXT PRIMARY KEY,
+      tender_id TEXT NOT NULL REFERENCES tenders(id) ON DELETE CASCADE,
+      author_id TEXT NOT NULL REFERENCES users(id),
+      note TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);
     CREATE INDEX IF NOT EXISTS idx_followups_quotation ON follow_ups(quotation_id);
+    CREATE INDEX IF NOT EXISTS idx_tenders_status ON tenders(status);
+    CREATE INDEX IF NOT EXISTS idx_tender_notes_tender ON tender_notes(tender_id);
   `);
 
   // Migration: add the "provisions" column (what's included in the package,
@@ -98,7 +130,39 @@ function init(): DatabaseSync {
     db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;");
   }
 
+  seedFirstAdmin(db);
+
   return db;
+}
+
+// Creates the very first admin login from environment variables, but only
+// when the users table is completely empty. This is what lets a brand-new
+// (or freshly wiped) deployment be signed into straight away, without anyone
+// having to open a shell on the server. It never touches an existing login:
+// once any user exists, these variables are ignored, so a password changed
+// later from "Manage users" is never overwritten on a redeploy.
+function seedFirstAdmin(db: DatabaseSync) {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) return;
+
+  const { n } = db.prepare("SELECT COUNT(*) AS n FROM users").get() as {
+    n: number;
+  };
+  if (n > 0) return;
+
+  if (password.length < 8) {
+    console.warn(
+      "ADMIN_PASSWORD is shorter than 8 characters, so the first admin login was not created."
+    );
+    return;
+  }
+
+  const name = process.env.ADMIN_NAME?.trim() || "Admin";
+  db.prepare(
+    "INSERT INTO users (id, name, email, password, is_admin) VALUES (?, ?, ?, ?, 1)"
+  ).run(randomUUID(), name, email, bcrypt.hashSync(password, 10));
+  console.log(`Created the first admin login (${email}) from ADMIN_* variables.`);
 }
 
 // Opened lazily, on the first actual query — not as a side effect of

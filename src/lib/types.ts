@@ -86,3 +86,70 @@ export interface FollowUp {
 export interface FollowUpWithAuthor extends FollowUp {
   author_name: string;
 }
+
+// ---------- Tenders ----------
+
+export type TenderStatus =
+  | "FOUND"
+  | "PREPARING"
+  | "SUBMITTED"
+  | "WON"
+  | "LOST"
+  | "NOT_BIDDING";
+
+export const TENDER_STATUS_LABELS: Record<TenderStatus, string> = {
+  FOUND: "Found",
+  PREPARING: "Preparing",
+  SUBMITTED: "Submitted",
+  WON: "Won",
+  LOST: "Lost",
+  NOT_BIDDING: "Not bidding",
+};
+
+export const TENDER_STATUS_ORDER: TenderStatus[] = [
+  "FOUND",
+  "PREPARING",
+  "SUBMITTED",
+  "WON",
+  "LOST",
+  "NOT_BIDDING",
+];
+
+// Tenders still needing work before the deadline — only these get the
+// "closing soon" / "overdue" flags on the list.
+export const TENDER_OPEN_STATUSES: TenderStatus[] = ["FOUND", "PREPARING"];
+
+export interface Tender {
+  id: string;
+  title: string;
+  organisation: string;
+  reference_number: string | null;
+  submission_deadline: string | null; // YYYY-MM-DD
+  estimated_value: number | null; // the tender's own estimated value
+  bid_value: number | null; // what we are bidding / bid
+  contact_person: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  status: TenderStatus;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenderWithMeta extends Tender {
+  created_by_name: string;
+  note_count: number;
+  last_note_at: string | null;
+}
+
+export interface TenderNote {
+  id: string;
+  tender_id: string;
+  author_id: string;
+  note: string;
+  created_at: string;
+}
+
+export interface TenderNoteWithAuthor extends TenderNote {
+  author_name: string;
+}

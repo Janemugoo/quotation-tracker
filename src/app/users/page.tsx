@@ -45,6 +45,7 @@ export default async function UsersPage({
       <TopNav
         userName={session.user.name ?? ""}
         isAdmin={isAdmin}
+        active="users"
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
@@ -117,6 +118,35 @@ export default async function UsersPage({
               </button>
             </div>
           </form>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
+          <h2 className="text-sm font-medium text-slate-700 mb-1">Backup &amp; export</h2>
+          <p className="text-xs text-slate-400 mb-4">
+            Download the data to open in Excel, or keep a full copy of the
+            database as a backup. The backup includes every login, so store
+            it somewhere safe.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/api/admin/export/quotations"
+              className="text-sm font-medium text-slate-700 border border-slate-300 rounded-lg px-4 py-2 hover:border-brand-brown/40 hover:bg-slate-50 transition-colors"
+            >
+              Export quotations (CSV)
+            </a>
+            <a
+              href="/api/admin/export/tenders"
+              className="text-sm font-medium text-slate-700 border border-slate-300 rounded-lg px-4 py-2 hover:border-brand-brown/40 hover:bg-slate-50 transition-colors"
+            >
+              Export tenders (CSV)
+            </a>
+            <a
+              href="/api/admin/backup"
+              className="text-sm font-medium text-white bg-brand-brown rounded-lg px-4 py-2 hover:bg-brand-brown-dark transition-colors"
+            >
+              Download full backup
+            </a>
+          </div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
