@@ -64,8 +64,6 @@ function init(): DatabaseSync {
       organisation TEXT NOT NULL,
       reference_number TEXT,
       submission_deadline TEXT,
-      estimated_value REAL,
-      bid_value REAL,
       contact_person TEXT,
       contact_phone TEXT,
       contact_email TEXT,

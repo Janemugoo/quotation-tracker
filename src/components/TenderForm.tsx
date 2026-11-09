@@ -88,38 +88,6 @@ export function TenderForm({
       </div>
 
       <div className="border-t border-slate-200 pt-5">
-        <h3 className="text-sm font-medium text-slate-700 mb-3">Value (KES)</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">
-              Estimated tender value
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              name="estimated_value"
-              defaultValue={tender?.estimated_value ?? ""}
-              placeholder="e.g. 2,500,000"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">
-              Our bid
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              name="bid_value"
-              defaultValue={tender?.bid_value ?? ""}
-              placeholder="Fill in once the bid is priced"
-              className={inputClass}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 pt-5">
         <h3 className="text-sm font-medium text-slate-700 mb-3">Contact</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

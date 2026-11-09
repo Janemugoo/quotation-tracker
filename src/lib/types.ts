@@ -125,8 +125,6 @@ export interface Tender {
   organisation: string;
   reference_number: string | null;
   submission_deadline: string | null; // YYYY-MM-DD
-  estimated_value: number | null; // the tender's own estimated value
-  bid_value: number | null; // what we are bidding / bid
   contact_person: string | null;
   contact_phone: string | null;
   contact_email: string | null;

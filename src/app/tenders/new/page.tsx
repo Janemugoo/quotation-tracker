@@ -23,8 +23,8 @@ export default async function NewTenderPage() {
           New tender
         </h1>
         <p className="text-sm text-slate-500 mb-6 shrink-0">
-          Record the tender as soon as you find it — you can fill in the bid
-          and update the status as it moves along.
+          Record the tender as soon as you find it — you can update the status
+          as it moves along.
         </p>
         <div className="bg-white border border-slate-200 rounded-xl p-6 flex-1 min-h-0 overflow-y-auto">
           <TenderForm action={createTenderAction} submitLabel="Save tender" />

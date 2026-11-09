@@ -131,8 +131,6 @@ export function parseTenderFormInput(formData: FormData): TenderInput {
     organisation: text("organisation"),
     reference_number: text("reference_number"),
     submission_deadline: text("submission_deadline"),
-    estimated_value: toNumber(text("estimated_value")),
-    bid_value: toNumber(text("bid_value")),
     contact_person: text("contact_person"),
     contact_phone: text("contact_phone"),
     contact_email: text("contact_email"),

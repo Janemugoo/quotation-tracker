@@ -350,8 +350,6 @@ export interface TenderInput {
   organisation: string;
   reference_number: string;
   submission_deadline: string;
-  estimated_value: number | null;
-  bid_value: number | null;
   contact_person: string;
   contact_phone: string;
   contact_email: string;
@@ -445,9 +443,9 @@ export function createTender(input: TenderInput, createdBy: string): Tender {
     .prepare(
       `INSERT INTO tenders (
          id, title, organisation, reference_number, submission_deadline,
-         estimated_value, bid_value, contact_person, contact_phone,
+         contact_person, contact_phone,
          contact_email, status, created_by
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
@@ -455,8 +453,6 @@ export function createTender(input: TenderInput, createdBy: string): Tender {
       input.organisation,
       input.reference_number,
       input.submission_deadline,
-      input.estimated_value,
-      input.bid_value,
       input.contact_person,
       input.contact_phone,
       input.contact_email,
@@ -471,7 +467,7 @@ export function updateTender(id: string, input: TenderInput): void {
     .prepare(
       `UPDATE tenders SET
          title = ?, organisation = ?, reference_number = ?, submission_deadline = ?,
-         estimated_value = ?, bid_value = ?, contact_person = ?, contact_phone = ?,
+         contact_person = ?, contact_phone = ?,
          contact_email = ?, status = ?, updated_at = datetime('now')
        WHERE id = ?`
     )
@@ -480,8 +476,6 @@ export function updateTender(id: string, input: TenderInput): void {
       input.organisation,
       input.reference_number,
       input.submission_deadline,
-      input.estimated_value,
-      input.bid_value,
       input.contact_person,
       input.contact_phone,
       input.contact_email,

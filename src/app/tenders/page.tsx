@@ -14,11 +14,6 @@ import { Pager } from "@/components/Pager";
 
 const PAGE_SIZE = 25;
 
-function formatMoney(value: number | null) {
-  if (value === null || value === undefined) return "—";
-  return `KES ${value.toLocaleString("en-KE")}`;
-}
-
 export default async function TendersPage({
   searchParams,
 }: {
@@ -72,7 +67,7 @@ export default async function TendersPage({
           <div>
             <h1 className="text-xl font-semibold text-brand-brown">Tenders</h1>
             <p className="text-sm text-slate-500">
-              Tenders we are watching or bidding on, soonest deadline first.
+              Tenders we are watching, soonest deadline first.
             </p>
           </div>
           <Link
@@ -130,8 +125,6 @@ export default async function TendersPage({
                     <th className="px-4 py-3 font-medium">Deadline</th>
                     <th className="px-4 py-3 font-medium">Tender</th>
                     <th className="px-4 py-3 font-medium">Reference</th>
-                    <th className="px-4 py-3 font-medium">Est. value</th>
-                    <th className="px-4 py-3 font-medium">Our bid</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Notes</th>
                   </tr>
@@ -156,16 +149,6 @@ export default async function TendersPage({
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                         <Link href={`/tenders/${t.id}`} className="block">
                           {t.reference_number || "—"}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                        <Link href={`/tenders/${t.id}`} className="block">
-                          {formatMoney(t.estimated_value)}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-brand-green-dark font-medium whitespace-nowrap">
-                        <Link href={`/tenders/${t.id}`} className="block">
-                          {formatMoney(t.bid_value)}
                         </Link>
                       </td>
                       <td className="px-4 py-3">

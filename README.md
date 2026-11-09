@@ -35,8 +35,8 @@ Declined / Lost.
   admin, or remove a login — no server access needed for day-to-day account
   changes
 - A **Tenders** page (linked at the top) to track tenders: title, issuing
-  organisation, reference number, submission deadline, estimated value and
-  our bid, contact details, and a status (Found → Preparing → Submitted →
+  organisation, reference number, submission deadline,
+  contact details, and a status (Found → Preparing → Submitted →
   Won / Lost / Not bidding) with a dated notes log. Tenders still being
   worked on are listed first, soonest deadline at the top, and flagged
   "Due in 3 days", "Due today" or "N days overdue"
