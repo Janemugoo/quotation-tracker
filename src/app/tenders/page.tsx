@@ -123,7 +123,7 @@ export default async function TendersPage({
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                     <th className="px-4 py-3 font-medium">Deadline</th>
-                    <th className="px-4 py-3 font-medium">Tender</th>
+                    <th className="px-4 py-3 font-medium">Organisation / tender</th>
                     <th className="px-4 py-3 font-medium">Reference</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Notes</th>
@@ -142,8 +142,8 @@ export default async function TendersPage({
                       </td>
                       <td className="px-4 py-3 max-w-[260px]">
                         <Link href={`/tenders/${t.id}`} className="block">
-                          <div className="font-medium text-slate-900 truncate">{t.title}</div>
-                          <div className="text-xs text-slate-400 truncate">{t.organisation}</div>
+                          <div className="font-medium text-slate-900 truncate">{t.organisation}</div>
+                          <div className="text-xs text-slate-400 truncate">{t.title}</div>
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">

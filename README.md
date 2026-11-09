@@ -37,7 +37,7 @@ Declined / Lost.
 - A **Tenders** page (linked at the top) to track tenders: title, issuing
   organisation, reference number, submission deadline,
   contact details, and a status (Found → Preparing → Submitted →
-  Won / Lost / Not bidding) with a dated notes log. Tenders still being
+  Won / Lost) with a dated notes log. Tenders still being
   worked on are listed first, soonest deadline at the top, and flagged
   "Due in 3 days", "Due today" or "N days overdue"
 - Long lists are paged (25 per page), so the dashboard stays quick as the

@@ -55,8 +55,8 @@ export default async function TenderDetailPage({
 
         <div className="flex items-start justify-between gap-4 mt-2 mb-6 shrink-0">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-brand-brown">{tender.title}</h1>
-            <p className="text-sm text-slate-500 mt-0.5">{tender.organisation}</p>
+            <h1 className="text-xl font-semibold text-brand-brown">{tender.organisation}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{tender.title}</p>
             <p className="text-xs text-slate-400 mt-0.5">
               Added by {tender.created_by_name} · {formatDateTime(tender.created_at)}
             </p>

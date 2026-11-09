@@ -16,8 +16,27 @@ export function TenderForm({
   tender?: Tender;
   submitLabel: string;
 }) {
+  // A tender saved with a status that is no longer offered keeps showing it.
+  const statusOptions = tender && !TENDER_STATUS_ORDER.includes(tender.status)
+    ? [...TENDER_STATUS_ORDER, tender.status]
+    : TENDER_STATUS_ORDER;
+
   return (
     <form action={action} className="space-y-5">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Issued by (organisation) *
+        </label>
+        <input
+          type="text"
+          name="organisation"
+          required
+          defaultValue={tender?.organisation}
+          placeholder="e.g. Kenya Wildlife Service"
+          className={inputClass}
+        />
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           Tender title *
@@ -27,25 +46,12 @@ export function TenderForm({
           name="title"
           required
           defaultValue={tender?.title}
-          placeholder="e.g. Supply of catering services 2026/27"
+          placeholder="e.g. Provision of hotel accommodation and conference facilities"
           className={inputClass}
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Issued by (organisation) *
-          </label>
-          <input
-            type="text"
-            name="organisation"
-            required
-            defaultValue={tender?.organisation}
-            placeholder="e.g. Kenya Wildlife Service"
-            className={inputClass}
-          />
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             Tender reference number
@@ -78,7 +84,7 @@ export function TenderForm({
             defaultValue={tender?.status ?? "FOUND"}
             className={inputClass}
           >
-            {TENDER_STATUS_ORDER.map((s) => (
+            {statusOptions.map((s) => (
               <option key={s} value={s}>
                 {TENDER_STATUS_LABELS[s]}
               </option>

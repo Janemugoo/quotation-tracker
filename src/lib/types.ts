@@ -106,13 +106,14 @@ export const TENDER_STATUS_LABELS: Record<TenderStatus, string> = {
   NOT_BIDDING: "Not bidding",
 };
 
+// "Not bidding" is no longer offered, but its label stays so a tender saved
+// with it earlier still displays properly.
 export const TENDER_STATUS_ORDER: TenderStatus[] = [
   "FOUND",
   "PREPARING",
   "SUBMITTED",
   "WON",
   "LOST",
-  "NOT_BIDDING",
 ];
 
 // Tenders still needing work before the deadline — only these get the

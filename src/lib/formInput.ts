@@ -1,5 +1,5 @@
 import {
-  TENDER_STATUS_ORDER,
+  TENDER_STATUS_LABELS,
   type QuotationLineItem,
   type QuotationStatus,
   type TenderStatus,
@@ -134,6 +134,6 @@ export function parseTenderFormInput(formData: FormData): TenderInput {
     contact_person: text("contact_person"),
     contact_phone: text("contact_phone"),
     contact_email: text("contact_email"),
-    status: TENDER_STATUS_ORDER.includes(rawStatus) ? rawStatus : "FOUND",
+    status: rawStatus in TENDER_STATUS_LABELS ? rawStatus : "FOUND",
   };
 }
