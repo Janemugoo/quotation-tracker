@@ -11,10 +11,14 @@ export function TenderForm({
   action,
   tender,
   submitLabel,
+  withNotes = false,
 }: {
   action: (formData: FormData) => void;
   tender?: Tender;
   submitLabel: string;
+  // Shows a Notes box (used on the new-tender form) so the first note is
+  // saved together with the tender.
+  withNotes?: boolean;
 }) {
   // A tender saved with a status that is no longer offered keeps showing it.
   const statusOptions = tender && !TENDER_STATUS_ORDER.includes(tender.status)
@@ -131,6 +135,23 @@ export function TenderForm({
           </div>
         </div>
       </div>
+
+      {withNotes && (
+        <div className="border-t border-slate-200 pt-5">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Notes
+          </label>
+          <p className="text-xs text-slate-400 mb-2">
+            Optional — anything worth recording about this tender. More notes
+            can be added later from the tender&apos;s page.
+          </p>
+          <textarea
+            name="note"
+            rows={3}
+            className={inputClass}
+          />
+        </div>
+      )}
 
       <div className="pt-2">
         <button

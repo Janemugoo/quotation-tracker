@@ -20,9 +20,16 @@ export async function createTenderAction(formData: FormData) {
     throw new Error("Tender title and the issuing organisation are required.");
   }
 
-  const tender = createTender(input, (session.user as { id: string }).id);
+  const userId = (session.user as { id: string }).id;
+  const tender = createTender(input, userId);
+
+  // The first note can be typed straight into the new-tender form.
+  const note = (formData.get("note") as string | null)?.trim();
+  if (note) addTenderNote({ tenderId: tender.id, authorId: userId, note });
+
   revalidatePath("/tenders");
-  redirect(`/tenders/${tender.id}`);
+  // Back to a blank form, ready for the next tender.
+  redirect(`/tenders/new?saved=${tender.id}`);
 }
 
 export async function updateTenderAction(id: string, formData: FormData) {
