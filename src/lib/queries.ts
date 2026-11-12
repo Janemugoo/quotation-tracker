@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./db";
+import type { HallBooking, HallBookingStatus } from "./halls";
 import type {
   FollowUpWithAuthor,
   Quotation,
@@ -529,4 +530,122 @@ export function tenderStatusCounts(): Record<TenderStatus, number> {
   };
   for (const row of rows) result[row.status] = row.n;
   return result;
+}
+
+// ---------- Hall bookings ----------
+
+export interface HallBookingInput {
+  hall: string;
+  group_name: string;
+  start_date: string;
+  end_date: string;
+  pax: number | null;
+  status: HallBookingStatus;
+  notes: string;
+  quotation_id: string | null;
+}
+
+// node:sqlite returns rows as null-prototype objects, which Next.js refuses to
+// hand to client components. Hall bookings are shown by client components, so
+// they are copied into plain objects on the way out.
+function plainBooking(row: unknown): HallBooking {
+  return { ...(row as HallBooking) };
+}
+
+// Bookings that touch any day from `from` to `to` (both inclusive).
+export function listHallBookings(from: string, to: string): HallBooking[] {
+  return getDb()
+    .prepare(
+      `SELECT * FROM hall_bookings
+       WHERE start_date <= ? AND end_date >= ?
+       ORDER BY hall, start_date`
+    )
+    .all(to, from)
+    .map(plainBooking);
+}
+
+export function getHallBooking(id: string): HallBooking | undefined {
+  const row = getDb().prepare("SELECT * FROM hall_bookings WHERE id = ?").get(id);
+  return row ? plainBooking(row) : undefined;
+}
+
+// An existing booking in the same hall that shares at least one day with the
+// given dates, if any. Two bookings may touch end-to-start only if they are on
+// different days, because end_date is the last day the hall is in use.
+export function findHallClash(
+  hall: string,
+  start: string,
+  end: string,
+  ignoreId?: string
+): HallBooking | undefined {
+  const row = getDb()
+    .prepare(
+      `SELECT * FROM hall_bookings
+       WHERE hall = ? AND start_date <= ? AND end_date >= ? AND id != ?
+       ORDER BY start_date LIMIT 1`
+    )
+    .get(hall, end, start, ignoreId ?? "");
+  return row ? plainBooking(row) : undefined;
+}
+
+export function createHallBooking(input: HallBookingInput, userId: string): HallBooking {
+  const id = randomUUID();
+  getDb()
+    .prepare(
+      `INSERT INTO hall_bookings (
+         id, hall, group_name, start_date, end_date, pax, status, notes,
+         quotation_id, created_by
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      input.hall,
+      input.group_name,
+      input.start_date,
+      input.end_date,
+      input.pax,
+      input.status,
+      input.notes || null,
+      input.quotation_id,
+      userId
+    );
+  return getHallBooking(id)!;
+}
+
+export function setHallBookingStatus(id: string, status: HallBookingStatus): void {
+  getDb()
+    .prepare(
+      "UPDATE hall_bookings SET status = ?, updated_at = datetime('now') WHERE id = ?"
+    )
+    .run(status, id);
+}
+
+export function deleteHallBooking(id: string): void {
+  getDb().prepare("DELETE FROM hall_bookings WHERE id = ?").run(id);
+}
+
+export function listHallBookingsForQuotation(quotationId: string): HallBooking[] {
+  return getDb()
+    .prepare(
+      "SELECT * FROM hall_bookings WHERE quotation_id = ? ORDER BY start_date, hall"
+    )
+    .all(quotationId)
+    .map(plainBooking);
+}
+
+// Client names already used on quotations, offered as suggestions when typing
+// the group on a hall booking.
+export function listQuotationGroupNames(): string[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT group_name FROM quotations
+       GROUP BY group_name ORDER BY MAX(created_at) DESC LIMIT 200`
+    )
+    .all() as { group_name: string }[];
+  return rows.map((r) => r.group_name);
+}
+
+// True when a quotation with this id exists. Used to check a link before saving it.
+export function quotationExists(id: string): boolean {
+  return !!getDb().prepare("SELECT 1 FROM quotations WHERE id = ?").get(id);
 }

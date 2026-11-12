@@ -9,9 +9,9 @@ export function TopNav({
 }: {
   userName: string;
   isAdmin?: boolean;
-  active?: "quotations" | "tenders" | "users";
+  active?: "quotations" | "tenders" | "halls" | "users";
 }) {
-  const linkClass = (key: "quotations" | "tenders" | "users") =>
+  const linkClass = (key: "quotations" | "tenders" | "halls" | "users") =>
     `text-sm whitespace-nowrap transition-colors ${
       active === key
         ? "font-medium text-brand-brown"
@@ -40,6 +40,9 @@ export function TopNav({
           </Link>
           <Link href="/tenders" className={linkClass("tenders")}>
             Tenders
+          </Link>
+          <Link href="/halls" className={linkClass("halls")}>
+            Halls
           </Link>
           {isAdmin && (
             <Link

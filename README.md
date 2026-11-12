@@ -40,6 +40,15 @@ Declined / Lost.
   Won / Lost) with a dated notes log. Tenders still being
   worked on are listed first, soonest deadline at the top, and flagged
   "Due in 3 days", "Due today" or "N days overdue"
+- A **Halls** page (linked at the top) with a calendar of which hall is
+  booked on which days: Figtree, Acacia, Sarawing A and B, plus the ANN
+  VAUGHAN Conference Center halls (Pelican, Giraffe, Longonot, Hyrax). A
+  "Today" strip lists the halls that are free right now. Click an empty day to
+  book it, or click a booking to confirm, check or remove it. Bookings are
+  whole days, and the same hall can't be booked twice on the same day. A
+  Confirmed or TBC quotation has a "Hall booking" card that fills in the
+  group, dates and pax (Confirmed books the hall, TBC holds it tentatively).
+  The list of halls lives in `src/lib/halls.ts`
 - Long lists are paged (25 per page), so the dashboard stays quick as the
   number of quotations and tenders grows
 - Admins get a **Backup & export** card on the "Manage users" page:
@@ -218,6 +227,8 @@ src/
     tenders/new/page.tsx        add a tender
     tenders/[id]/page.tsx       view / edit a tender + notes log
     tenders/actions.ts          create/update/delete tender, add note
+    halls/page.tsx              hall calendar (today strip, 1 week / 2 weeks / month)
+    halls/actions.ts            book a hall (refuses overlaps), confirm, remove
     api/admin/export/quotations   admin-only CSV of all quotations
     api/admin/export/tenders      admin-only CSV of all tenders
     api/admin/backup              admin-only full database download
@@ -228,8 +239,9 @@ src/
     QuotationForm.tsx          shared add/edit form
     LineItemsEditor.tsx         the Rate Breakdown row editor (package/rate/pax/nights/provisions per line)
     StatusBadge.tsx
-    TopNav.tsx                 Quotations / Tenders links; "Manage users" for admins only
+    TopNav.tsx                 Quotations / Tenders / Halls links; "Manage users" for admins only
     TenderForm.tsx             shared add/edit form for tenders
+    HallsView.tsx, BookingDialog.tsx, QuotationHallCard.tsx   hall calendar, booking form, quotation card
     TenderStatusBadge.tsx, DeadlineLabel.tsx, DeleteTenderDialog.tsx, Pager.tsx
     DeleteQuotationDialog.tsx   confirm-before-delete popup (quotations)
     DeleteUserDialog.tsx        confirm-before-delete popup (users)
@@ -240,6 +252,7 @@ src/
     authz.ts                     who counts as an admin (incl. the bootstrap case)
     csv.ts                       CSV writer used by the exports
     tenderDates.ts              deadline maths (Nairobi time)
+    halls.ts, hallDates.ts      the list of halls + calendar-day maths for the hall calendar
     types.ts                    shared types
     pdf/quotationLetter.ts       the letter template itself
   auth.ts / auth.config.ts / proxy.ts   login + route protection

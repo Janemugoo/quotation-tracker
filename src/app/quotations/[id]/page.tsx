@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { getQuotation, listFollowUps } from "@/lib/queries";
+import {
+  getQuotation,
+  listFollowUps,
+  listHallBookingsForQuotation,
+  listQuotationGroupNames,
+} from "@/lib/queries";
 import { isSessionAdmin } from "@/lib/authz";
 import { TopNav } from "@/components/TopNav";
 import { QuotationForm } from "@/components/QuotationForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DeleteQuotationDialog } from "@/components/DeleteQuotationDialog";
+import { QuotationHallCard } from "@/components/QuotationHallCard";
 import {
   addFollowUpAction,
   deleteQuotationAction,
@@ -37,6 +43,11 @@ export default async function QuotationDetailPage({
   if (!quotation) notFound();
 
   const followUps = listFollowUps(id);
+  const hallBookings = listHallBookingsForQuotation(id);
+  // Offered on confirmed and TBC quotations (and any that already hold a hall).
+  const showHallCard =
+    quotation.status === "CONFIRMED" || quotation.status === "TBC" || hallBookings.length > 0;
+  const paxNumber = Number(quotation.number_of_pax);
   const updateAction = updateQuotationAction.bind(null, id);
   const updateAndPrintAction = updateAndPrintQuotationAction.bind(null, id);
   const deleteAction = deleteQuotationAction.bind(null, id);
@@ -81,6 +92,19 @@ export default async function QuotationDetailPage({
               printLabel="Save & print quotation"
             />
           </div>
+
+          {showHallCard && (
+            <QuotationHallCard
+              quotationId={quotation.id}
+              groupName={quotation.group_name}
+              eventFrom={quotation.event_date_from}
+              eventTo={quotation.event_date_to}
+              pax={Number.isInteger(paxNumber) && paxNumber > 0 ? paxNumber : null}
+              confirmed={quotation.status === "CONFIRMED"}
+              bookings={hallBookings}
+              groupNames={listQuotationGroupNames()}
+            />
+          )}
 
           <div className="bg-white border border-slate-200 rounded-xl p-6">
             <h2 className="text-sm font-semibold text-slate-900 mb-4">

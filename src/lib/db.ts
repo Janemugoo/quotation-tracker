@@ -81,10 +81,30 @@ function init(): DatabaseSync {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- A hall taken for one or more whole days. end_date is the last day
+    -- (inclusive). A quotation can optionally be linked; deleting the quotation
+    -- keeps the booking on the calendar.
+    CREATE TABLE IF NOT EXISTS hall_bookings (
+      id TEXT PRIMARY KEY,
+      hall TEXT NOT NULL,
+      group_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      pax INTEGER,
+      status TEXT NOT NULL DEFAULT 'CONFIRMED',
+      notes TEXT,
+      quotation_id TEXT REFERENCES quotations(id) ON DELETE SET NULL,
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);
     CREATE INDEX IF NOT EXISTS idx_followups_quotation ON follow_ups(quotation_id);
     CREATE INDEX IF NOT EXISTS idx_tenders_status ON tenders(status);
     CREATE INDEX IF NOT EXISTS idx_tender_notes_tender ON tender_notes(tender_id);
+    CREATE INDEX IF NOT EXISTS idx_hall_bookings_hall_dates ON hall_bookings(hall, start_date, end_date);
+    CREATE INDEX IF NOT EXISTS idx_hall_bookings_quotation ON hall_bookings(quotation_id);
   `);
 
   // Migration: add the "provisions" column (what's included in the package,
